@@ -23,18 +23,27 @@ import java.util.Locale;
 public class Bot extends TelegramLongPollingBot {
 
     //Переменные
-
     private boolean screaming = false; //Переменная для выбора режима ответа бота: Крик/тихо
 
-
-
-    //Клавиатуры
+    //Клавиатуры (меню)
     private InlineKeyboardMarkup keyboardM1;
     private InlineKeyboardMarkup keyboardM2;
 
+    //Кнопки
+    InlineKeyboardButton next = InlineKeyboardButton.builder()
+            .text("Next")           // Название кнопки
+            .callbackData("next")   // Данные отпраляемые в update
+            .build();
+    InlineKeyboardButton back = InlineKeyboardButton.builder()
+            .text("Back")           // Название кнопки
+            .callbackData("back")   // Данные отпраляемые в update
+            .build();
+    InlineKeyboardButton url = InlineKeyboardButton.builder()
+            .text("Tutorial")
+            .url("https://core.telegram.org/bots/api")      //Ссылка на сторонний ресурс
+            .build();
 
     //Переопределнные методы
-
     @Override
     public String getBotUsername() {
         return "SKRID_ONE_BOT";
@@ -54,29 +63,8 @@ public class Bot extends TelegramLongPollingBot {
     //Метод вызывается автоматически при отправки боту сообщения.
     @Override
     public void onUpdateReceived(Update update) {
-        //Получение данных: сообщение, отправитель и его id
-        var msg = update.getMessage();
-        var user = msg.getFrom();
-        var id = user.getId();
+        System.out.println(update);
 
-        if (update.hasCallbackQuery()) {
-            System.out.println("КТО-ТО НАЖАЛ КНОПКУ!");
-            sendText(id, "SEND button");
-        }
-
-        //Кнопки
-        var next = InlineKeyboardButton.builder()
-                .text("Next")           // Название кнопки
-                .callbackData("next")   // Данные отпраляемые в update
-                .build();
-        var back = InlineKeyboardButton.builder()
-                .text("Back")           // Название кнопки
-                .callbackData("back")   // Данные отпраляемые в update
-                .build();
-        var url = InlineKeyboardButton.builder()
-                .text("Tutorial")
-                .url("https://core.telegram.org/bots/api")
-                .build();
         //Клавиатуры
         keyboardM1 = InlineKeyboardMarkup.builder()
                 .keyboardRow(List.of(next))
@@ -86,9 +74,13 @@ public class Bot extends TelegramLongPollingBot {
                 .keyboardRow(List.of(url))
                 .build();
 
-
-        //Сначала надо обработать все команды бота /commands
-        if (msg.isCommand()){
+        // Если боту отправили сообщение
+        if (update.hasMessage()){
+            //Сначала надо обработать все команды бота /commands
+            //Получение данных: сообщение, отправитель и его id
+            var msg = update.getMessage();
+            var user = msg.getFrom();
+            var id = user.getId();
             //Предполагается, что мы знаем команды бота
             if(msg.getText().equals("/scream")){
                 screaming = true;
@@ -98,15 +90,42 @@ public class Bot extends TelegramLongPollingBot {
                 sendMenu(id,"<b>Menu 1</b>", keyboardM1);
             }
 
-            return;         //Мы не хотим повторять команды - выходим
+
+            //Логика поведения бота
+            if(screaming){
+                scream(id, msg);
+            } else {
+                copyMessage(id, msg.getMessageId());
+            }
+
+            return; //Мы не хотим повторять команды - выходим
+
+            //Если нажали на кнопку
+        } else if (update.hasCallbackQuery()) {
+//            System.out.println("CALLBACK");
+            //CallBack запрос
+            CallbackQuery callbackQuery = update.getCallbackQuery();
+
+            Long id = callbackQuery.getMessage().getChatId();
+            String queryId = callbackQuery.getId();
+            String data = callbackQuery.getData();
+            int msgId = callbackQuery.getMessage().getMessageId();
+
+            //Метод для обработки нажатия кнопок
+            buttonTap(id, queryId, data, msgId);
+
+//            AnswerCallbackQuery close = AnswerCallbackQuery.builder()
+//                    .callbackQueryId(update.getCallbackQuery().getId()).build();
+//
+//            try {
+//                execute(close);
+//            } catch (TelegramApiException e) {
+//                throw new RuntimeException(e);
+//            }
+
         }
 
-        //Логика поведения бота
-        if(screaming){
-            scream(id, msg);
-        } else {
-            copyMessage(id, msg.getMessageId());
-        }
+
 
 
     }
@@ -186,15 +205,22 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * Метод обработки нажатий кнопок
+     * @param id Id пользователя кто нажал на кнопку
+     * @param queryId Id callback запроса
+     * @param data Содержание callback запроса
+     * @param msgId Id сообщения
+     */
     private void buttonTap(Long id, String queryId, String data, int msgId){
         EditMessageText newTxt = EditMessageText.builder()
                 .chatId(id.toString())
-                .messageId(msgId)
+                .messageId(Integer.valueOf(msgId))
                 .text("").build();
 
         EditMessageReplyMarkup newKb = EditMessageReplyMarkup.builder()
                 .chatId(id.toString())
-                .messageId(msgId)
+                .messageId(Integer.valueOf(msgId))
                 .build();
 
         if (data.equals("next")){
@@ -222,7 +248,7 @@ public class Bot extends TelegramLongPollingBot {
         TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
         Bot bot = new Bot();
         botsApi.registerBot(bot);
-        bot.sendText(782908610L, "The SKRID_ONE_BOT is running!");  //The L just turns the Integer into a Long
+        bot.sendText(Long.valueOf(782908610L), "The SKRID_ONE_BOT is running!");  //The L just turns the Integer into a Long
 
     }
 
