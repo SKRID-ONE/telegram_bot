@@ -18,7 +18,13 @@
         <dependency>
             <groupId>org.telegram</groupId>
             <artifactId>telegrambots</artifactId>
-            <version>6.0.1</version>
+            <version>6.9.7.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.plexpt</groupId>
+            <artifactId>chatgpt</artifactId>
+            <version>4.3.0</version>
         </dependency>
     </dependencies>
 
